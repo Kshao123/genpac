@@ -1,16 +1,10 @@
-# GenPac
-**基于[gfwlist][gfw-list-uri]的多种代理软件配置文件生成工具，支持自定义规则，目前可生成的格式有pac, dnsmasq, wingy。**
-> 基于仓库 [JinnLynn/genpac][genpac]（具体使用可去原 [README](./ORIGINAL_README.md) 查找），参考 [petronny/gfwlist2pac][gfwlist2pac] 编写相关代码。
+# GenPAC
 
-## Diff
-**genpac/pysocks/socks.py**
-```diff
-- from collections import Callable
-+ from collections.abc import Callable
-```
+[![pypi-version]][pypi] [![pypi-license]][pypi] [![travis-ci-status]][travis-ci]
+
+基于gfwlist的多种代理软件配置文件生成工具，支持自定义规则，目前可生成的格式有pac, dnsmasq, wingy。
 
 ### 安装
-**方案一**
 ```shell
 # 安装或更新
 $ pip install -U genpac
@@ -20,22 +14,8 @@ $ pip install -U https://github.com/JinnLynn/genpac/archive/dev.zip
 # 卸载
 $ pip uninstall genpac
 ```
-**方案二**
-```shell
-$ git clone https://github.com/Kshao123/gfwlist2pac.git
-$ cd gfwlist2pac
-$ python setup.py install
 
-# 快速测试，原始文件和结果可在 demo 目录下查看（pac-proxy 采用 clash 默认代理配置，可根据不同情况自行修改）
-# "--gfwlist-url -" 表示不使用远程 gfwlist，"--gfwlist-local demo/gfwlist.txt" 表示使用本地 gfwlist
-$ genpac --pac-proxy "SOCKS5 127.0.0.1:7890; SOCKS 127.0.0.1:7890; DIRECT;" --gfwlist-url - --gfwlist-local demo/gfwlist.txt -o demo/gfwlist.pac
-
-# 或使用自己的规则来覆盖 "--user-rule-from demo/user-rules.txt"
-# 根据 http://adblockplus.org/en/filters 规则来定义，可根据 demo/user-rules.txt 查看
-# 简单理解既：不想被 proxy：@@||openai.com，想被 proxy：||baidu.com
-$ genpac --pac-proxy "SOCKS5 127.0.0.1:7890; SOCKS 127.0.0.1:7890; DIRECT;" --gfwlist-url - --gfwlist-local demo/gfwlist.txt -o demo/gfwlist.pac --user-rule-from demo/user-rules.txt
-```
-
+**注意：** 如果安装后，执行时出现无法找到命令的错误，可能是因为`genpac`命令没有被安装到系统路径，如Ububtu 16.04且通过apt-get安装的pip的环境下，`genpac`执行入口文件被安装到了`~/.local/bin`，遇到这种情况，将`~/.local/bin`添加到系统路径，或卸载重新使用sudo安装，都可以解决问题。
 
 ### 使用方法
 
@@ -111,6 +91,52 @@ WINGY:
   --wingy-rule-adapter-id ID
                         生成规则使用的adapter ID
 ```
+
+### 配置文件
+
+支持通过 `--config-from` 参数读入配置信息，配置文件书写方法可参考[sample/config.ini][]
+
+### 自定义规则
+
+支持通过 `--user-rule` 自定义单个规则或 `--user-rule-from` 读入自定义规则文件，这两个参数均可重复使用。
+
+自定义规则文件可参考[sample/user-rules.txt][]
+
+自定义规则的语法与gfwlist相同，使用AdBlock Plus过滤规则( http://adblockplus.org/en/filters )，简述如下:
+
+1. 通配符支持，如 `*.example.com/*` 实际书写时可省略 `*` 为 `.example.com/`
+2. 正则表达式支持，以 `\` 开始和结束，如 `\[\w]+:\/\/example.com\\`
+3. 例外规则 `@@` ，如 `@@*.example.com/*` 满足 `@@` 后规则的地址不使用代理
+4. 匹配地址开始和结尾 `|` ，如 `|http://example.com` 、 `example.com|` 分别表示以 `http://example.com` 开始和以 `example.com` 结束的地址
+5. `||` 标记，如 `||example.com` 则 `http://example.com https://example.com ftp://example.com` 等地址均满足条件
+6. 注释 `!` 如 `! Comment`
+
+配置自定义规则时需谨慎，尽量避免与gfwlist产生冲突，或将一些本不需要代理的网址添加到代理列表
+
+规则优先级从高到底为: user-rule > user-rule-from > gfwlist
+
+### FAQ
+
+1. PAC格式中，参数`--pac-precise`的精确匹配模式的作用是什么？
+
+   1.4.0之后生成的PAC文件默认只对域名进行匹配，如规则`.ftchinese.com/channel/video`处理后为`ftchinese.com`，所有在`ftchinese.com`下的网址都将通过匹配，在这种模式下可以减少PAC文件尺寸，并在一定程度上提高效率，推荐使用，但如果你依然想用原有的规则进行精确的网址匹配判断，则使用参数`--pac-precise`或在配置文件中设置`pac-precise=true`即可。
+
+1. 出现`fetch gfwlist fail. `错误
+
+   gfwlist是在线获取，某些情况下可能被和谐或其它原因导致获取失败，可以通过以下几种方法解决该问题：
+    * 使用`--gfwlist-proxy`参数，通过代理获取gfwlist
+    * 通过其它方式下载到本地，再通过`--gfwlist-local`加载
+    * 使用参数`--gfwlist-url=-`不进行在线获取，这种情况下你只能使用自定义规则
+
+1. gfwlist获取代理使用失败
+
+    * 检查--gfwlist-proxy参数或配置gfwlist-proxy值是格式否符合`TYPE HOST:POST`，如`SOCKS5 127.0.0.1:1080、PROXY 127.0.0.1:8080`
+    * OSX Linux如果存在http_proxy、https_proxy环境变量，代理可能无法正常使用
+
+1. genpac命令未找到
+
+   见前文安装章节的注意事项。
+
 ### 示例
 
 ```
@@ -155,7 +181,12 @@ genpac --format=wingy --wingy-opts="id:do-ss,type:ss,host:192.168.100.1,port:888
 genpac --format=wingy --template=/sample/wingy-tpl.yaml
 ```
 
-
-[gfw-list-uri]: https://github.com/gfwlist/gfwlist
-[genpac]: https://github.com/JinnLynn/genpac
-[gfwlist2pac]: https://github.com/petronny/gfwlist2pac
+[gfwlist]: https://raw.githubusercontent.com/gfwlist/gfwlist/master/gfwlist.txt
+[sample/config.ini]: https://github.com/JinnLynn/genpac/blob/master/sample/config.ini
+[sample/user-rules.txt]: https://github.com/JinnLynn/genpac/blob/master/sample/user-rules.txt
+[pypi]:             https://pypi.python.org/pypi/genpac
+[travis-ci]:        https://travis-ci.org/JinnLynn/genpac
+[pypi-version]:     https://img.shields.io/pypi/v/genpac.svg?style=flat
+[pypi-license]:     https://img.shields.io/pypi/l/genpac.svg?style=flat
+[travis-ci-status]: https://img.shields.io/travis/JinnLynn/genpac.svg?style=flat
+[dev-badge]:        https://img.shields.io/badge/dev-2.0b2-orange.svg?style=flat
