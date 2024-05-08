@@ -6,7 +6,7 @@ __version__ = '2.1.0'
 __author__ = 'JinnLynn <eatfishlin@gmail.com>'
 __license__ = 'The MIT License'
 __copyright__ = 'Copyright 2013-2018 JinnLynn'
-__project_url__ = 'https://github.com/JinnLynn/genpac'
+__project_url__ = 'https://github.com/Kshao123/gfwlist2pac'
 
 __all__ = ['GenPAC', 'TemplateFile', 'FmtBase',
            'formater', 'run', 'parse_rules']

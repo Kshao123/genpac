@@ -19,6 +19,7 @@ function FindProxyForURL(url, host) {
     return 'DIRECT';
 }
 
+// rules 数组第 0 项为白名单，第一项为 Proxy
 function testHost(host, index) {
     for (var i = 0; i < rules[index].length; i++) {
         for (var j = 0; j < rules[index][i].length; j++) {
